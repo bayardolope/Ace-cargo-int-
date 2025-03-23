@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-from flask import Flask, request, jsonify
+import os
 import time
+from flask import Flask, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -59,12 +60,8 @@ def login_to_site(username, password):
         return None
 
 def select_warehouse(driver):
-    """
-    Asegura que la opción de 'Warehouse' esté seleccionada antes de buscar.
-    """
     print("Paso SCRAP-1.1: Seleccionando 'Warehouse' en el buscador...")
     wait = WebDriverWait(driver, 10)
-
     try:
         warehouse_radio = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@id='warehouse']/ancestor::label")))
         warehouse_radio.click()
@@ -76,13 +73,8 @@ def select_warehouse(driver):
         return False
 
 def search_tracking(driver, code):
-    """
-    Selecciona 'Warehouse' y busca el número de tracking.
-    """
     print(f"Paso SCRAP-1.2: Ingresando número de tracking {code} y buscando...")
-
     wait = WebDriverWait(driver, 10)
-
     try:
         if not select_warehouse(driver):
             return False
@@ -95,30 +87,23 @@ def search_tracking(driver, code):
         search_button = wait.until(EC.element_to_be_clickable((By.ID, "buscar")))
         search_button.click()
         print("  -> Clic en botón de búsqueda. Esperando resultado...")
-        time.sleep(5)  
-
+        time.sleep(5)
         return True
-
     except Exception as e:
         print(f"Error al buscar el tracking {code}: {e}")
         return False
 
 def get_tracking_url(driver, code):
     print(f"Paso SCRAP-2: Buscando enlace de detalles para {code}...")
-
     wait = WebDriverWait(driver, 10)
-
     try:
         results_div = wait.until(EC.visibility_of_element_located((By.ID, "results")))
         time.sleep(2)
-
         xpath_query = f".//h3[@id='Cabecera']/a[contains(text(), '{code}')]"
         link_element = wait.until(EC.presence_of_element_located((By.XPATH, xpath_query)))
         tracking_url = link_element.get_attribute("href")
-
         print(f"  -> Enlace obtenido: {tracking_url}")
         return tracking_url
-
     except TimeoutException:
         print(f"ERROR: No se encontró un enlace con el código {code} en #results.")
         return None
@@ -130,18 +115,12 @@ def get_tracking_url(driver, code):
         return None
 
 def parse_tracking_details(driver, tracking_url):
-    """
-    Navega a la página de detalles y extrae la información clave.
-    """
     print(f"Paso SCRAP-3: Abriendo página de detalles {tracking_url}...")
-
     try:
         driver.get(tracking_url)
         time.sleep(5)
-
         soup = BeautifulSoup(driver.page_source, "html.parser")
 
-        # Función para extraer datos desde los iconos de FA
         def get_info(icon_class):
             element = soup.find("i", class_=icon_class)
             if element:
@@ -162,14 +141,10 @@ def parse_tracking_details(driver, tracking_url):
             print(f"{key.replace('_', ' ').capitalize()}: {value}")
 
         return details
-
     except Exception as e:
         print(f"Error al extraer detalles: {e}")
         return None
 
-# =======================
-# ENDPOINT DE LA API
-# =======================
 @app.route('/tracking', methods=['GET'])
 def tracking_endpoint():
     code = request.args.get('numero')
@@ -196,5 +171,8 @@ def tracking_endpoint():
 
     return jsonify({'tracking': code, 'details': details})
 
+# Aquí ajustamos el host y el puerto según la variable de entorno 'PORT'
 if __name__ == '__main__':
-    app.run(debug=True)
+    import os
+    port = int(os.environ.get('PORT', 5000))  # Toma el valor de PORT o usa 5000 por defecto
+    app.run(host='0.0.0.0', port=port, debug=True)
