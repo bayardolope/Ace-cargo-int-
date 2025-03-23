@@ -27,6 +27,8 @@ def login_to_site(username, password):
     chrome_options = Options()
     chrome_options.add_argument("--headless")  # Modo headless para producción
     chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     
     driver = webdriver.Chrome(options=chrome_options)
@@ -171,8 +173,8 @@ def tracking_endpoint():
 
     return jsonify({'tracking': code, 'details': details})
 
-# Aquí ajustamos el host y el puerto según la variable de entorno 'PORT'
+# Ajuste para producción: usar la variable de entorno PORT y escuchar en 0.0.0.0
 if __name__ == '__main__':
-    import os
-    port = int(os.environ.get('PORT', 5000))  # Toma el valor de PORT o usa 5000 por defecto
+    port = int(os.environ.get('PORT', 5000))  # Usa el puerto asignado o 5000 por defecto
     app.run(host='0.0.0.0', port=port, debug=True)
+
