@@ -27,10 +27,16 @@ WORKDIR /app
 COPY . /app
 
 # Instala las dependencias de Python
+# IMPORTANTE: Asegúrate de que 'gunicorn' esté en tu requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expone el puerto 8000
+# Expone el puerto (8000 por convención; Railway suele asignar uno dinámico)
 EXPOSE 8000
 
-# Comando de arranque
-CMD ["python", "app.py"]
+# Comando de arranque con Gunicorn y un timeout de 120s
+# Gunicorn tomará la variable $PORT (que define la plataforma) si existe;
+# si no, usará 8000 por defecto. Ajusta el timeout según tus necesidades.
+ENV PORT 8000
+CMD exec gunicorn app:app \
+    --bind 0.0.0.0:$PORT \
+    --timeout 120
